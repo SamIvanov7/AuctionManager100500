@@ -1,0 +1,64 @@
+<?php
+namespace classes\add_user;
+
+if(!$is_require) {
+	require $_SERVER['DOCUMENT_ROOT'].'/classes/get_404.php';
+}
+
+class add_user extends \classes\common\common {
+	
+	public function __construct(){
+		
+		parent::__construct();
+		parent::check_auth();
+		
+		if(!$this->is_auth){
+			exit(json_encode(array('error'=>'FAIL_AUTH')));
+		}
+		
+		$login = parent::login($_POST['login'] ? $_POST['login'] : '');
+		$pass = preg_replace('/[^a-zA-Z0-9_\.]/u','', $_POST['pass'] ? $_POST['pass'] : '');
+		
+		$file_path = $this->config->install_dir_auction_manager_app.'/users/'.$this->login;
+		
+		if(!file_exists($file_path)){
+			exit(json_encode(array('error'=>'NO_EXISTS_LOGIN')));
+		}
+		$file = parent::file_($file_path, 'array', __FILE__, __LINE__);
+		
+		if($file[0] != 'admin'){
+			exit(json_encode(array('error'=>'ACCESS_IS_DENIED')));
+		}
+		
+		if ($login === '') {
+			exit(json_encode(array('error'=>'FAIL_LOGIN')));
+		}
+
+		if ($login === '_') {
+			exit(json_encode(array('error'=>'FAIL_LOGIN2')));
+		}
+		
+		$len = mb_strlen($pass);
+		if ($len < 6 || $len > 50) {
+			exit(json_encode(array('error'=>'FAIL_PASS')));
+		}
+		
+		$hash = md5($pass.'jooooiu');
+		
+		$file_path = $this->config->install_dir_auction_manager_app.'/users/'.$login;
+		
+		if(file_exists($file_path)){
+			exit(json_encode(array('error'=>'EXISTS_LOGIN')));
+		}
+		
+		$text = 'user'.$this->php_eol . $hash . $this->php_eol . $this->php_eol . $this->php_eol;
+		
+		$f = fopen($file_path, 'a+');
+		fwrite($f, $text);
+		fclose($f);
+		
+		exit(json_encode(array('response'=>array('login'=>$login))));
+		
+	}
+	
+}

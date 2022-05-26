@@ -1,0 +1,43 @@
+<?php
+namespace classes\check_subscribe_telegram_channel;
+
+if(!$is_require) {
+	require $_SERVER['DOCUMENT_ROOT'].'/classes/get_404.php';
+}
+
+class check_subscribe_telegram_channel extends \classes\common\common {
+	
+	public function __construct(){
+		
+		parent::__construct();
+		parent::check_auth();
+		
+		if(!$this->is_auth){
+			exit;
+		}
+		
+		$country_code = preg_replace('/[^a-z]/', '', $_POST['country_code']);
+		
+		if(!in_array($country_code, array('de', 'us', 'kr'))){
+			exit(json_encode(array('error'=>'FAIL_COUNTRY_CODE')));
+		}
+		
+		$file_path = $this->config->install_dir_auction_manager_app.'/users/'.$this->login;
+		
+		if(file_exists($file_path)){
+			
+			$file = parent::file_($file_path, 'array', __FILE__, __LINE__);
+			$si = sizeof($file) - 1;
+			$value = '';
+			for($i = 3; $i < $si; $i++){
+				$ex = explode('|', $file[$i]);
+				if($ex[1] == $country_code){
+					exit(json_encode(array('response'=>array('ok', $ex[3]))));
+				}
+			}
+		
+		}
+		
+	}
+	
+}

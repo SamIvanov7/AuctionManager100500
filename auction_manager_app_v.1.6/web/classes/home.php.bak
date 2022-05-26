@@ -1,0 +1,37 @@
+<?php
+namespace classes\home;
+
+if(!$is_require) {
+	require $_SERVER['DOCUMENT_ROOT'].'/classes/get_404.php';
+}
+
+class home extends \classes\common\common {
+	
+	public function __construct(){
+		
+		parent::__construct();
+		
+		$is_require = true;
+		
+		if(getenv('REQUEST_METHOD') == 'GET'){
+			
+			list($browser, $browser_ver, $os) = parent::get_browser_and_os();
+			self::$browser = $browser;
+			self::$browser_ver = $browser_ver;
+			self::$os = $os;
+			self::$device = parent::get_device();
+			self::log_access();
+
+		}
+		
+		if(getenv('REQUEST_METHOD') == 'POST'){
+			
+			require_once 'classes/post_request_handler.php';
+			new \classes\post_request_handler\post_request_handler();
+			exit;
+			
+		}
+	
+	}
+	
+}

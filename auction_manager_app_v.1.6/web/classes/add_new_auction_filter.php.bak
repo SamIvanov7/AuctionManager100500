@@ -1,0 +1,207 @@
+<?php
+namespace classes\add_new_auction_filter;
+
+if(!$is_require) {
+	require $_SERVER['DOCUMENT_ROOT'].'/classes/get_404.php';
+}
+
+class add_new_auction_filter extends \classes\common\common {
+	
+	public function __construct(){
+		
+		parent::__construct();
+		parent::check_auth();
+		
+		if(!$this->is_auth){
+			exit(json_encode(array('error'=>'FAIL_AUTH')));
+		}
+		
+		$filter = parent::remove_bad_symbol($_POST['filter'], false);
+		$act = preg_replace('/[^a-z]/', '', $_POST['act']);
+		$id = preg_replace('/[^0-9]/', '', $_POST['id']);
+		$country_code = preg_replace('/[^a-z]/', '', $_POST['country_code']);
+		
+		$ex = explode('|', $filter);
+		$f = false;
+		$car_brand = preg_replace('/^none$/', '', $ex[0]);
+		if($car_brand != ''){$f = true;}
+		$car_model = preg_replace('/^none$/', '', $ex[1]);
+		if($car_model != ''){$f = true;}
+		$type_of_fuel = preg_replace('/^none$/', '', $ex[2]);
+		if($type_of_fuel != ''){$f = true;}
+		$price_from = preg_replace('/^none$/', '', $ex[3]);
+		if($price_from != ''){$f = true;}
+		$price_up_to = preg_replace('/^none$/', '', $ex[4]);
+		if($price_up_to != ''){$f = true;}
+		$year_since = preg_replace('/^none$/', '', $ex[5]);
+		if($year_since != ''){$f = true;}
+		$year_of_release_by = preg_replace('/^none$/', '', $ex[6]);
+		if($year_of_release_by != ''){$f = true;}
+		$mileage_from = preg_replace('/^none$/', '', $ex[7]);
+		if($mileage_from != ''){$f = true;}
+		$mileage_to = preg_replace('/^none$/', '', $ex[8]);
+		if($mileage_to != ''){$f = true;}
+		$engine_displacement_from = preg_replace('/^none$/', '', $ex[9]);
+		if($engine_displacement_from != ''){$f = true;}
+		$engine_displacement_up_to = preg_replace('/^none$/', '', $ex[10]);
+		if($engine_displacement_up_to != ''){$f = true;}
+		
+		if(!$f){
+			exit(json_encode(array('error'=>'FAIL_FILTER')));
+		}
+		
+		if(!in_array($country_code, array('de', 'us', 'kr'))){
+			exit(json_encode(array('error'=>'FAIL_COUNTRY_CODE')));
+		}
+		
+		if(!file_exists($this->config->install_dir_auction_manager_app.'/users/'.$this->login)){
+			exit(json_encode(array('error'=>'NO_EXISTS_LOGIN')));
+		}
+		
+		$date = parent::convert_format_date($this->date);
+		
+		switch($country_code){
+			case 'de':
+				
+				$file_path = $this->config->install_dir_auction_manager_app.'/filters/filters_'.$country_code.'.conf';
+				if(file_exists($file_path)){
+					
+					$file = parent::file_($file_path, 'array', __FILE__, __LINE__);
+					$car_brands_ = $file[0];
+					$car_model_ = $file[1];
+					$type_of_fuel_ = $file[2];
+					$car_prices_ = $file[3];
+					$years_of_release_ = $file[4];
+					$mileage_ = $file[5];
+					$engine_volume_ = $file[6];
+					
+					if($car_brand && strpos($car_brands_, '\''.$car_brand.'\':') === false){
+						exit(json_encode(array('error'=>'FAIL_PARAM_CAR_BRAND')));
+					}
+					
+					if($car_model && strpos($car_model_, '\''.$car_model.'\':') === false){
+						exit(json_encode(array('error'=>'FAIL_PARAM_CAR_MODEL')));
+					}
+					
+					if($type_of_fuel && strpos($type_of_fuel_, '\''.$type_of_fuel.'\':') === false){
+						exit(json_encode(array('error'=>'FAIL_PARAM_TYPE_OF_FUEL')));
+					}
+					
+					if($price_from && strpos($car_prices_, '\''.$price_from.'\'') === false){
+						exit(json_encode(array('error'=>'FAIL_PARAM_PRICE_FROM')));
+					}
+					
+					if($price_up_to && strpos($car_prices_, '\''.$price_up_to.'\'') === false){
+						exit(json_encode(array('error'=>'FAIL_PARAM_PRICE_TO')));
+					}
+					
+					if($price_from && $price_up_to && $price_from > $price_up_to){
+						$price_from = $price_up_to;
+					}
+					
+					if($year_since && strpos($years_of_release_, '\''.$year_since.'\'') === false){
+						exit(json_encode(array('error'=>'FAIL_PARAM_YEAR_SINCE')));
+					}
+					
+					if($year_of_release_by && strpos($years_of_release_, '\''.$year_of_release_by.'\'') === false){
+						exit(json_encode(array('error'=>'FAIL_PARAM_YEAR_OF_RELEASE_BY')));
+					}
+					
+					if($year_since && $year_of_release_by && $year_since > $year_of_release_by){
+						$year_since = $year_of_release_by;
+					}
+					
+					if($mileage_from && strpos($mileage_, '\''.$mileage_from.'\'') === false){
+						exit(json_encode(array('error'=>'FAIL_PARAM_MILEAGE_FROM')));
+					}
+					
+					if($mileage_to && strpos($mileage_, '\''.$mileage_to.'\'') === false){
+						exit(json_encode(array('error'=>'FAIL_PARAM_MILEAGE_TO')));
+					}
+					
+					if($mileage_from && $mileage_to && $mileage_from > $mileage_to){
+						$mileage_from = $mileage_to;
+					}
+					
+					if($engine_displacement_from && strpos($engine_volume_, '\''.$engine_displacement_from.'\'') === false){
+						exit(json_encode(array('error'=>'FAIL_PARAM_ENGINE_DISPLACEMENT_FROM')));
+					}
+					
+					if($engine_displacement_up_to && strpos($engine_volume_, '\''.$engine_displacement_up_to.'\'') === false){
+						exit(json_encode(array('error'=>'FAIL_PARAM_ENGINE_DISPLACEMENT_UP_TO')));
+					}
+
+					if($engine_displacement_from && $engine_displacement_up_to && $engine_displacement_from > $engine_displacement_up_to){
+						$engine_displacement_from = $engine_displacement_up_to;
+					}
+					
+					$file_path = $this->config->install_dir_auction_manager_app.'/user_filters/'.$this->login;
+						
+						$f = fopen($file_path, 'a+');
+							if (flock($f, LOCK_EX)) {
+								
+								clearstatcache(true, $file_path);
+								$siz = filesize($file_path);
+								if ($siz != 0) {
+									
+									$text = fread($f, $siz);
+									$text = explode($this->php_eol, $text);
+									$si = sizeof($text) - 1;
+									
+									if($act == 'add' && mb_ereg($country_code.'\|'.$car_brand.'\|'.$car_model.'\|'.$type_of_fuel.'\|'.$price_from.':'.$price_up_to.'\|'.$year_since.':'.$year_of_release_by.'\|'.$mileage_from.':'.$mileage_to.'\|'.$engine_displacement_from.':'.$engine_displacement_up_to.'\|', $text)){
+										flock($f, LOCK_UN);
+										fclose($f);
+										exit(json_encode(array('error'=>'FILTER_IS_EXISTS')));
+									}
+									
+									if($act == 'add'){
+										$result = $country_code.'|'.$car_brand.'|'.$car_model.'|'.$type_of_fuel.'|'.$price_from.':'.$price_up_to.'|'.$year_since.':'.$year_of_release_by.'|'.$mileage_from.':'.$mileage_to.'|'.$engine_displacement_from.':'.$engine_displacement_up_to.'|'.$date.'|'.$this->rnd;
+										$text2 = $result . $this->php_eol;
+									}
+									
+									if($act == 'edit'){
+										
+										for($i = 0; $i < $si; $i++){
+											
+											$ex = explode('|', $text[$i]);
+											if($ex[9] == $id){
+												$result = $country_code.'|'.$car_brand.'|'.$car_model.'|'.$type_of_fuel.'|'.$price_from.':'.$price_up_to.'|'.$year_since.':'.$year_of_release_by.'|'.$mileage_from.':'.$mileage_to.'|'.$engine_displacement_from.':'.$engine_displacement_up_to.'|'.$date.'|'.$ex[9];
+												$text2 .= $result . $this->php_eol;
+											}else{
+												$text2 .= $text[$i] . $this->php_eol;
+											}
+											
+										}
+										
+										ftruncate($f, 0);
+										stream_set_write_buffer($f, 0);
+										
+									}
+									fwrite($f, $text2);
+									fflush($f);
+										
+								}
+									
+								flock($f, LOCK_UN);
+								
+							}
+							else {
+								parent::log_er_flock(__FILE__, __LINE__);
+							}
+							fclose($f);
+					
+				}else{
+					exit(json_encode(array('error'=>'NO_EXISTS_FILTERS.CONF')));
+				}
+				
+			break;
+		}
+		
+		$f = fopen($this->config->install_dir_auction_manager_app.'/reload_user_conf', 'w+');
+		fclose($f);
+		
+		exit(json_encode(array('response'=>array('ok', $act, $result))));
+		
+	}
+	
+}

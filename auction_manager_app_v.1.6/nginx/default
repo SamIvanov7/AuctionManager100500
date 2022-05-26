@@ -1,0 +1,73 @@
+server {
+listen 80;
+server_name x.x.x.x ""; # x.x.x.x - ip сервера, необходимо указать свое значение
+limit_conn connection_ip 100;
+return 444;
+}
+
+server {
+listen 80;
+index index.php index.html;
+server_name site.com; # site.com - заменить на адрес своего домена по которому должен открыватся сайт, или можно написать ip сервера
+root /var/www/default/public;
+limit_conn connection_ip 100;
+
+if ($host ~ "^www\.(.+)") {
+return 301 http://$1; # http - заменить на https если используется https
+}
+
+if ($request_uri ~ "^(.*)index\.(?:php|html)") {
+return 301 $1;
+}
+
+if ($request_method !~ ^(GET|HEAD|POST)$) {
+return 444;
+}
+
+location = / {
+try_files $uri $uri/ /index.php?$query_string =404;
+}
+
+location ~* /(admin|data)/.+\.(txt|log) {
+return 403;
+}
+
+location ~ /\. {
+deny all;
+}
+
+location ~* /service_errors/errors\.log {
+root /usr/local/auction_manager_app;
+default_type text/html;
+try_files /errors.log =404;
+}
+
+location ~* /parsing_errors/(errors_parse__.+\.log) {
+root /usr/local/auction_manager_app/log_error_parse;
+default_type text/html;
+try_files /$1 =404;
+}
+
+location ~* /auth_errors/(errors_auth__.+\.log) {
+root /usr/local/auction_manager_app/log_error_auth;
+default_type text/html;
+try_files /$1 =404;
+}
+
+location ~* \.(css|js|jpe?g|png|gif|ico|mp3|m4a|aac|ogg|midi?|wav|mp4|mov|webm|mpe?g|avi|ogv|fl|svgz?|ttf|ttc|otf|eot|woff|woff2) {
+expires 90d;
+access_log off;
+}
+
+location ~* \.php$ {
+limit_req zone=request_speed burst=1 nodelay;
+try_files $uri =404;
+fastcgi_read_timeout 120;
+fastcgi_split_path_info ^(.+\.php)(/.+)$;
+fastcgi_pass unix:/var/run/php/php7.3-fpm.sock;
+fastcgi_index index.php;
+fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+include fastcgi_params;
+}
+
+}
